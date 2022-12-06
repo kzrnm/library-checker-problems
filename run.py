@@ -1,5 +1,6 @@
 from logging import basicConfig, getLogger
 import time
+import sys
 from generate import main
 
 logger = getLogger(__name__)
@@ -152,24 +153,20 @@ tasks = [
 ]
 
 basicConfig(
-    format="%(asctime)s {name}[%(levelname)s] %(message)s",
+    format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
     level='INFO',
 )
 
-with open('result.md', 'w') as fp:
-    print("# generation times", file=fp)
-    print("", file=fp)
-    print("|task|time [ms] |", file=fp)
-    print("|:---|---:|", file=fp)
-    for t in tasks:
-        p = t.split('/')[1]
-        print(f"::group::Start {t}")
-        start = time.perf_counter()
-        main(["-p", p])
-        end = time.perf_counter()
-        print("::endgroup::")
-        elapsed = end - start
+task = sys.argv[1]
+with open('result.md', 'a') as fp:
+    p = task.split('/')[1]
+    print(f"::group::Start {task}")
+    start = time.perf_counter()
+    main(["-p", p])
+    end = time.perf_counter()
+    print("::endgroup::")
+    elapsed = end - start
 
-        print(f"{t} {elapsed}ms")
-        print(f"|{t}|{elapsed}|", file=fp)
+    print(f"{task} {elapsed}sec")
+    print(f"|{task}|{elapsed}|", file=fp)

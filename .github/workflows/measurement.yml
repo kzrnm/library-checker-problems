@@ -7,15 +7,250 @@ on:
   workflow_dispatch:
 jobs:
   measurement:
+    uses: ./.github/workflows/measurement_impl.yml
+    with:
+      name: ${{matrix.measurement.name}}
+      run: ${{matrix.measurement.run}}
+    strategy:
+      matrix:
+        measurement:
+          - name: measurement1
+            run: |
+              python run.py graph/global_minimum_cut_of_dynamic_star_augmented_graph
+              python run.py string/zalgorithm
+              python run.py string/suffixarray
+              python run.py string/runenumerate
+              python run.py string/prefix_substring_lcs
+          - name: measurement2
+            run: |
+              python run.py string/number_of_substrings
+              python run.py string/enumerate_palindromes
+              python run.py sample/many_aplusb
+              python run.py sample/aplusb
+          - name: measurement3
+            run: |
+              python run.py math/two_sat
+              python run.py math/tetration_mod
+              python run.py math/system_of_linear_equations
+              python run.py math/sum_of_totient_function
+          - name: measurement4
+            run: |
+              python run.py math/sum_of_floor_of_linear
+              python run.py math/sum_of_exponential_times_polynomial_limit
+              python run.py math/sum_of_exponential_times_polynomial
+              python run.py math/subset_convolution
+          - name: measurement5
+            run: |
+              python run.py math/stirling_number_of_the_second_kind_small_p_large_n
+              python run.py math/stirling_number_of_the_second_kind
+              python run.py math/stirling_number_of_the_first_kind_small_p_large_n
+              python run.py math/stirling_number_of_the_first_kind
+          - name: measurement6
+            run: |
+              python run.py math/sqrt_of_formal_power_series_sparse
+              python run.py math/sqrt_of_formal_power_series
+              python run.py math/sqrt_mod
+              python run.py math/sparse_matrix_det
+          - name: measurement7
+            run: |
+              python run.py math/shift_of_sampling_points_of_polynomial
+              python run.py math/sharp_p_subset_sum
+              python run.py math/product_of_polynomial_sequence
+              python run.py math/primitive_root
+          - name: measurement8
+            run: |
+              python run.py math/pow_of_formal_power_series_sparse
+              python run.py math/pow_of_formal_power_series
+              python run.py math/polynomial_taylor_shift
+              python run.py math/polynomial_interpolation
+          - name: measurement9
+            run: |
+              python run.py math/partition_function
+              python run.py math/nim_product_64
+              python run.py math/multivariate_convolution
+              python run.py math/multipoint_evaluation
+          - name: measurement10
+            run: |
+              python run.py math/mul_mod2n_convolution
+              python run.py math/montmort_number_mod
+              python run.py math/min_of_mod_of_linear
+              python run.py math/matrix_product
+          - name: measurement11
+            run: |
+              python run.py math/matrix_det_arbitrary_mod
+              python run.py math/matrix_det
+              python run.py math/log_of_formal_power_series_sparse
+              python run.py math/log_of_formal_power_series
+          - name: measurement12
+            run: |
+              python run.py math/lcm_convolution
+              python run.py math/kth_term_of_linearly_recurrent_sequence
+              python run.py math/kth_root_mod
+              python run.py math/kth_root_integer
+          - name: measurement13
+            run: |
+              python run.py math/inverse_matrix
+              python run.py math/inv_of_polynomials
+              python run.py math/inv_of_formal_power_series_sparse
+              python run.py math/inv_of_formal_power_series
+          - name: measurement14
+            run: |
+              python run.py math/hafnian_of_matrix
+              python run.py math/gcd_convolution
+              python run.py math/find_linear_recurrence
+              python run.py math/factorize
+          - name: measurement15
+            run: |
+              python run.py math/exp_of_formal_power_series_sparse
+              python run.py math/exp_of_formal_power_series
+              python run.py math/enumerate_primes
+              python run.py math/division_of_polynomials
+          - name: measurement16
+            run: |
+              python run.py math/discrete_logarithm_mod
+              python run.py math/counting_primes
+              python run.py math/convolution_mod_large
+              python run.py math/convolution_mod_2_64
+          - name: measurement17
+            run: |
+              python run.py math/convolution_mod_1000000007
+              python run.py math/convolution_mod
+              python run.py math/composition_of_formal_power_series
+              python run.py math/characteristic_polynomial
+          - name: measurement18
+            run: |
+              python run.py math/bitwise_xor_convolution
+              python run.py math/bitwise_and_convolution
+              python run.py math/binomial_coefficient
+              python run.py math/bernoulli_number
+          - name: measurement19
+            run: |
+              python run.py graph/vertex_add_range_contour_sum_on_tree
+              python run.py graph/two_edge_connected_components
+              python run.py graph/tree_diameter
+              python run.py graph/tree_decomposition_width_2
+          - name: measurement20
+            run: |
+              python run.py graph/three_edge_connected_components
+              python run.py graph/shortest_path
+              python run.py graph/scc
+              python run.py graph/rooted_tree_isomorphism_classification
+          - name: measurement21
+            run: |
+              python run.py graph/min_cost_b_flow
+              python run.py graph/maximum_independent_set
+              python run.py graph/manhattanmst
+              python run.py graph/lca
+          - name: measurement22
+            run: |
+              python run.py graph/k_shortest_walk
+              python run.py graph/jump_on_tree
+              python run.py graph/general_weighted_matching
+          - name: measurement23
+            run: |
+              python run.py graph/general_matching
+              python run.py graph/frequency_table_of_tree_distance
+              python run.py graph/enumerate_triangles
+              python run.py graph/enumerate_cliques
+          - name: measurement24
+            run: |
+              python run.py graph/dominatortree
+              python run.py graph/directedmst
+              python run.py graph/cycle_detection_undirected
+              python run.py graph/cycle_detection
+          - name: measurement25
+            run: |
+              python run.py graph/common_interval_decomposition_tree
+              python run.py graph/chromatic_number
+              python run.py graph/chordal_graph_recognition
+              python run.py graph/cartesian_tree
+          - name: measurement26
+            run: |
+              python run.py graph/bipartitematching
+              python run.py graph/bipartite_edge_coloring
+              python run.py graph/biconnected_components
+              python run.py graph/assignment
+          - name: measurement27
+            run: |
+              python run.py geo/sort_points_by_argument
+              python run.py geo/convex_layers
+              python run.py datastructure/vertex_set_path_composite
+              python run.py datastructure/vertex_add_subtree_sum
+          - name: measurement28
+            run: |
+              python run.py datastructure/vertex_add_path_sum
+              python run.py datastructure/unionfind
+              python run.py datastructure/staticrmq
+              python run.py datastructure/static_rectangle_add_rectangle_sum
+          - name: measurement29
+            run: |
+              python run.py datastructure/static_range_sum
+              python run.py datastructure/static_range_lis_query
+              python run.py datastructure/static_range_inversions_query
+              python run.py datastructure/static_range_frequency
+          - name: measurement30
+            run: |
+              python run.py datastructure/set_xor_min
+              python run.py datastructure/segment_add_get_min
+              python run.py datastructure/rectangle_sum
+              python run.py datastructure/range_kth_smallest
+          - name: measurement31
+            run: |
+              python run.py datastructure/range_chmin_chmax_add_range_sum
+              python run.py datastructure/range_affine_range_sum
+              python run.py datastructure/range_affine_point_get
+              python run.py datastructure/queue_operate_all_composite
+          - name: measurement32
+            run: |
+              python run.py datastructure/predecessor_problem
+              python run.py datastructure/point_set_range_sort_range_composite
+              python run.py datastructure/point_set_range_composite
+              python run.py datastructure/point_add_rectangle_sum
+          - name: measurement33
+            run: |
+              python run.py datastructure/point_add_range_sum
+              python run.py datastructure/persistent_unionfind
+              python run.py datastructure/persistent_queue
+              python run.py datastructure/number_of_subsequences
+          - name: measurement34
+            run: |
+              python run.py datastructure/longest_increasing_subsequence
+              python run.py datastructure/line_add_get_min
+              python run.py datastructure/dynamic_tree_vertex_set_path_composite
+              python run.py datastructure/dynamic_tree_vertex_add_subtree_sum
+          - name: measurement35
+            run: |
+              python run.py datastructure/dynamic_tree_vertex_add_path_sum
+              python run.py datastructure/dynamic_tree_subtree_add_subtree_sum
+              python run.py datastructure/dynamic_sequence_range_affine_range_sum
+              python run.py datastructure/dynamic_graph_vertex_add_component_sum
+          - name: measurement36
+            run: |
+              python run.py datastructure/double_ended_priority_queue
+              python run.py datastructure/deque_operate_all_composite
+              python run.py datastructure/associative_array
+              python run.py datastructure/area_of_union_of_rectangles
+
+  result:
     runs-on: ubuntu-latest
+    needs: measurement
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+      - name: Download binaries
+        uses: actions/download-artifact@v3
         with:
-          python-version: "3.10"
-      - name: Run
+          path: ${{runner.temp}}/results
+      - name: Show summary
         run: |
-          ulimit -s unlimited
-          python run.py
+          ls -l ${{runner.temp}}/results/*/result.md
+
+          echo "# generation times" >> result.md
+          echo "" >> result.md
+          echo "|task|time [sec] |" >> result.md
+          echo "|:---|---:|" >> result.md
+          cat ${{runner.temp}}/results/*/result.md | tee -a result.md
           cp result.md $GITHUB_STEP_SUMMARY
+      - uses: EndBug/add-and-commit@v9
+        with:
+          message: "Add measurement result"
+          add: "result.md --force"
