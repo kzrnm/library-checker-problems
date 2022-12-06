@@ -1,461 +1,1416 @@
-#include<iostream>
-#include<vector>
-#include<math.h>
-#include<assert.h>
-#include<algorithm>
-#define MOD 998244353LL
-using namespace::std;
+// Copy from https://github.com/NyaanNyaan/library/blob/6abcedf4fd779ce0a42a8b50d3cbbfa3ae5aef1a/verify/verify-yosupo-fps/yosupo-composition.test.cpp
+#line 1 "verify/verify-yosupo-fps/yosupo-composition.test.cpp"
+#define PROBLEM \
+  "https://judge.yosupo.jp/problem/composition_of_formal_power_series"
 
-template<typename T,typename F>
-struct FPS_BASE:vector<T>{
-    using vector<T>::vector;
-    using P=FPS_BASE<T,F>;
-    F fft;
-    FPS_BASE(){}
-    inline P operator +(T x)const noexcept{return P(*this)+=x;}
-    inline P operator -(T x)const noexcept{return P(*this)-=x;}
-    inline P operator *(T x)const noexcept{return P(*this)*=x;}
-    inline P operator /(T x)const noexcept{return P(*this)/=x;}
-    inline P operator <<(int x)noexcept{return P(*this)<<=x;}
-    inline P operator >>(int x)noexcept{return P(*this)>>=x;}
-    inline P operator +(const P& x)const noexcept{return P(*this)+=x;}
-    inline P operator -(const P& x)const noexcept{return P(*this)-=x;}
-    inline P operator -()const noexcept{return P(1,T(0))-=P(*this);}
-    inline P operator *(const P& x)const noexcept{return P(*this)*=x;}
-    inline P operator /(const P& x)const noexcept{return P(*this)/=x;}
-    inline P operator %(const P& x)const noexcept{return P(*this)%=x;}
-    bool operator ==(P x){
-        for(int i=0;i<(int)max((*this).size(),x.size());++i){
-            if(i>=(int)(*this).size()&&x[i]!=T())return 0;
-            if(i>=(int)x.size()&&(*this)[i]!=T())return 0;
-            if(i<(int)min((*this).size(),x.size()))if((*this)[i]!=x[i])return 0;
-        }
-        return 1;
-    }
-    P &operator +=(T x){
-        if(this->size()==0)this->resize(1,T(0));
-        (*this)[0]+=x;
-        return (*this);
-    }
-    P &operator -=(T x){
-        if(this->size()==0)this->resize(1,T(0));
-        (*this)[0]-=x;
-        return (*this);
-    }
-    P &operator *=(T x){
-        for(int i=0;i<(int)this->size();++i){
-            (*this)[i]*=x;
-        }
-        return (*this);
-    }
-    P &operator /=(T x){
-        return (*this)*=(T(1)/x);
-    }
-    P &operator <<=(int x){
-        P ret(x,T(0));
-        ret.insert(ret.end(),begin(*this),end(*this));
-        return (*this)=ret;
-    }
-    P &operator >>=(int x){
-        if((int)(*this).size()<=x)return (*this)=P();
-        P ret;
-        ret.insert(ret.end(),begin(*this)+x,end(*this));
-        return (*this)=ret;
-    }
-    P &operator +=(const P& x){
-        if(this->size()<x.size())this->resize(x.size(),T(0));
-        for(int i=0;i<(int)x.size();++i){
-            (*this)[i]+=x[i];
-        }
-        return (*this);
-    }
-    P &operator -=(const P& x){
-        if(this->size()<x.size())this->resize(x.size(),T(0));
-        for(int i=0;i<(int)x.size();++i){
-            (*this)[i]-=x[i];
-        }
-        return (*this);
-    }
-    P &operator *=(const P& x){
-        return (*this)=F()(*this,x);
-    }
-    P &operator /=(P x){
-        if(this->size()<x.size()) {
-            this->clear();
-            return (*this);
-        }
-        const int n=this->size()-x.size()+1;
-        return (*this) = (rev().pre(n)*x.rev().inv(n)).pre(n).rev(n);
-    }
-    P &operator %=(const P& x){
-        return ((*this)-=*this/x*x);
-    }
-    inline void print(){
-        for(int i=0;i<(int)(*this).size();++i)cerr<<(*this)[i]<<" \n"[i==(int)(*this).size()-1];
-        if((int)(*this).size()==0)cerr<<endl;
-    }
-    inline P& shrink(){while((*this).back()==0)(*this).pop_back();return (*this);}
-    inline P pre(int sz)const{
-        return P(begin(*this),begin(*this)+min((int)this->size(),sz));
-    }
-    P rev(int deg=-1){
-        P ret(*this);
-        if(deg!=-1)ret.resize(deg,T(0));
-        reverse(begin(ret),end(ret));
-        return ret;
-    }
-    P inv(int deg=-1){
-        assert((*this)[0]!=T(0));
-        const int n=deg==-1?this->size():deg;
-        P ret({T(1)/(*this)[0]});
-        for(int i=1;i<n;i<<=1){
-            ret*=(-ret*pre(i<<1)+2).pre(i<<1);
-        }
-        return ret.pre(n);
-    }
-    inline P dot(const P& x){
-        P ret(*this);
-        for(int i=0;i<int(min(this->size(),x.size()));++i){
-            ret[i]*=x[i];
-        }
-        return ret;
-    }
-    P diff(){
-        if((int)(*this).size()<=1)return P();
-        P ret(*this);
-        for(int i=0;i<(int)ret.size();i++){
-            ret[i]*=i;
-        }
-        return ret>>1;
-    }
-    P integral(){
-        P ret(*this);
-        for(int i=0;i<(int)ret.size();i++){
-            ret[i]/=i+1;
-        }
-        return ret<<1;
-    }
-    P log(int deg=-1){
-        assert((*this)[0]==T(1));
-        const int n=deg==-1?this->size():deg;
-        return (diff()*inv(n)).pre(n-1).integral();
-    }
-    P exp(int deg=-1){
-        assert((*this)[0]==T(0));
-        const int n=deg==-1?this->size():deg;
-        P ret({T(1)});
-        for(int i=1;i<n;i<<=1){
-            ret=ret*(pre(i<<1)+1-ret.log(i<<1)).pre(i<<1);
-        }
-        return ret.pre(n);
-    }
-    P pow(int c,int deg=-1){
-        // const int n=deg==-1?this->size():deg;
-        // long long i=0;
-        // P ret(*this);
-        // while(i!=(int)this->size()&&ret[i]==0)i++;
-        // if(i==(int)this->size())return P(n,0);
-        // if(i*c>=n)return P(n,0);
-        // T k=ret[i];
-        // return ((((ret>>i)/k).log()*c).exp()*(k.pow(c))<<(i*c)).pre(n);
-        P x(*this);
-        P ret(1,1);
-        while(c) {
-            if(c&1){
-                ret*=x;
-                if(~deg)ret=ret.pre(deg);
-            }
-            x*=x;
-            if(~deg)x=x.pre(deg);
-            c>>=1;
-        }
-        return ret;
-    }
-    P sqrt(int deg=-1){
-        const int n=deg==-1?this->size():deg;
-        if((*this)[0]==T(0)) {
-            for(int i=1;i<(int)this->size();i++) {
-                if((*this)[i]!=T(0)) {
-                    if(i&1)return{};
-                    if(n-i/2<=0)break;
-                    auto ret=(*this>>i).sqrt(n-i/2)<<(i/2);
-                    if((int)ret.size()<n)ret.resize(n,T(0));
-                    return ret;
-                }
-            }
-            return P(n,0);
-        }
-        P ret({T(1)});
-        for(int i=1;i<n;i<<=1){
-            ret=(ret+pre(i<<1)*ret.inv(i<<1)).pre(i<<1)/T(2);
-        }
-        return ret.pre(n);
-    }
-    P shift(int c){
-        const int n=this->size();
-        P f(*this),g(n,0);
-        for(int i=0;i<n;++i)f[i]*=T(i).fact();
-        for(int i=0;i<n;++i)g[i]=T(c).pow(i)/T(i).fact();
-        g=g.rev();
-        f*=g;
-        f>>=n-1;
-        for(int i=0;i<n;++i)f[i]/=T(i).fact();
-        return f;
-    }
-    T eval(T x){
-        T res=0;
-        for(int i=(int)this->size()-1;i>=0;--i){
-            res*=x;
-            res+=(*this)[i];
-        }
-        return res;
-    }
-    vector<T> multipoint_eval(const vector<T>&x){
-        const int n=x.size();
-        P* v=new P[2*n-1];
-        for(int i=0;i<n;i++)v[i+n-1]={T()-x[i],T(1)};
-        for(int i=n-2;i>=0;i--){v[i]=v[i*2+1]*v[i*2+2];}
-        v[0]=P(*this)%v[0];v[0].shrink();
-        for(int i=1;i<n*2-1;i++){
-            v[i]=v[(i-1)/2]%v[i];
-            v[i].shrink();
-        }
-        vector<T>res(n);
-        for(int i=0;i<n;i++)res[i]=v[i+n-1][0];
-        return res;
-    }
-    P slice(int s,int e,int k){
-        P res;
-        for(int i=s;i<e;i+=k)res.push_back((*this)[i]);
-        return res;
-    }
-    T nth_term(P q,int64_t x){
-        if(x==0)return (*this)[0]/q[0];
-        P p(*this);
-        P q2=q;
-        for(int i=1;i<(int)q2.size();i+=2)q2[i]*=-1;
-        q*=q2;
-        p*=q2;
-        return p.slice(x%2,p.size(),2).nth_term(q.slice(0,q.size(),2),x/2);
-    }
-    
-    //(*this)(t(x))
-    P manipulate(P t,int deg){
-        P s=P(*this);
-        if(deg==0)return P();
-        if((int)t.size()==1)return P{s.eval(t[0])};
-        int k=min((int)::sqrt(deg/(::log2(deg)+1))+1,(int)t.size());
-        int b=deg/k+1;
-        P t2=t.pre(k);
-        vector<P>table(s.size()/2+1,P{1});
-        for(int i=1;i<(int)table.size();i++){
-            table[i]=((table[i-1])*t2).pre(deg);
-        }
-        auto f=[&](auto f,auto l,auto r,int deg)->P{
-            if(r-l==1)return P{*l};
-            auto m=l+(r-l)/2;
-            return f(f,l,m,deg)+(table[m-l]*f(f,m,r,deg)).pre(deg);
-        };
-        P ans=P();
-        P tmp=f(f,s.begin(),s.end(),deg);
-        P tmp2=P{1};
-        T tmp3=T(1);
-        int tmp5=-1;
-        P tmp6=t2.diff();
-        if(tmp6==P()){
-            for(int i=0;i<b;++i){
-                if(i>=(int)s.size())break;
-                ans+=(tmp2*s[i]).pre(deg);
-                tmp2=(tmp2*(t-t2)).pre(deg);
-            }
-        }else{
-            while(t2[++tmp5]==T());
-            P tmp4=(tmp6>>(tmp5-1)).inv(deg);
-            for(int i=0;i<b;++i){
-                ans+=(tmp*tmp2).pre(deg)/tmp3;
-                tmp=((tmp.diff()>>(tmp5-1))*tmp4).pre(deg);
-                tmp2=(tmp2*(t-t2)).pre(deg);
-                tmp3*=T(i+1);
-            }
-        }
-        return ans;
-    }
-    //(*this)(t(x))
-    P manipulate2(P t,int deg){
-        P ans=P();
-        P s=(*this).rev();
-        for(int i=0;i<(int)s.size();++i){
-            ans=(ans*t+s[i]).pre(deg);
-        }
-        return ans;
-    }
-    void debug(){
-        for(int i=0;i<(int)(*this).size();++i)cerr<<(*this)[i]<<" \n"[i==(int)(*this).size()-1];
-    }
+#line 2 "template/template.hpp"
+using namespace std;
+
+// intrinstic
+#include <immintrin.h>
+
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <cassert>
+#include <cctype>
+#include <cfenv>
+#include <cfloat>
+#include <chrono>
+#include <cinttypes>
+#include <climits>
+#include <cmath>
+#include <complex>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <initializer_list>
+#include <iomanip>
+#include <ios>
+#include <iostream>
+#include <istream>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <map>
+#include <memory>
+#include <new>
+#include <numeric>
+#include <ostream>
+#include <queue>
+#include <random>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <streambuf>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <typeinfo>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+// utility
+#line 1 "template/util.hpp"
+namespace Nyaan {
+using ll = long long;
+using i64 = long long;
+using u64 = unsigned long long;
+using i128 = __int128_t;
+using u128 = __uint128_t;
+
+template <typename T>
+using V = vector<T>;
+template <typename T>
+using VV = vector<vector<T>>;
+using vi = vector<int>;
+using vl = vector<long long>;
+using vd = V<double>;
+using vs = V<string>;
+using vvi = vector<vector<int>>;
+using vvl = vector<vector<long long>>;
+
+template <typename T, typename U>
+struct P : pair<T, U> {
+  template <typename... Args>
+  P(Args... args) : pair<T, U>(args...) {}
+
+  using pair<T, U>::first;
+  using pair<T, U>::second;
+
+  T &x() { return first; }
+  const T &x() const { return first; }
+  U &y() { return second; }
+  const U &y() const { return second; }
+
+  P &operator+=(const P &r) {
+    first += r.first;
+    second += r.second;
+    return *this;
+  }
+  P &operator-=(const P &r) {
+    first -= r.first;
+    second -= r.second;
+    return *this;
+  }
+  P &operator*=(const P &r) {
+    first *= r.first;
+    second *= r.second;
+    return *this;
+  }
+  P operator+(const P &r) const { return P(*this) += r; }
+  P operator-(const P &r) const { return P(*this) -= r; }
+  P operator*(const P &r) const { return P(*this) *= r; }
 };
 
-template<typename Mint>
-struct _FPS9{
-    template<typename T>
-    T operator()(T s,T t){
-        if(s==decltype(s)())return decltype(s)();
-        if(t==decltype(t)())return decltype(t)();
-        auto ntt=[](auto v,const bool& inv){
-            const int n=v.size();
-            assert(Mint::get_mod()>=3&&Mint::get_mod()%2==1);
-            decltype(v) tmp(n,Mint());
-            Mint root=inv?Mint(Mint::root()).inv():Mint::root();
-            for(int b=n>>1;b>=1;b>>=1,v.swap(tmp)){
-                Mint w=root.pow((Mint::get_mod()-1)/(n/b)),p=1;
-                for(int i=0;i<n;i+=b*2,p*=w)for(int j=0;j<b;++j){
-                    v[i+j+b]*=p;
-                    tmp[i/2+j]=v[i+j]+v[i+b+j];
-                    tmp[n/2+i/2+j]=v[i+j]-v[i+b+j];
-                }
-            }
-            if(inv)v/=n;
-            return v;
-        };
-        const int n=s.size()+t.size()-1;
-        int h=1;
-        while((1<<h)<n)h++;
-        s.resize((1<<h),Mint(0));
-        t.resize((1<<h),Mint(0));
-        return ntt(ntt(s,0).dot(ntt(t,0)),1).pre(n);
-    }
-};
-template<typename Mint>using fps=FPS_BASE<Mint,_FPS9<Mint>>;
+using pl = P<ll, ll>;
+using pi = P<int, int>;
+using vp = V<pl>;
 
-class mint {
-  using u64 = std::uint_fast64_t;
-    public:
-    u64 a;
-    constexpr mint(const long long x = 0)noexcept:a(x>=0?x%get_mod():get_mod()-(-x)%get_mod()){}
-    constexpr u64 &value()noexcept{return a;}
-    constexpr const u64 &value() const noexcept {return a;}
-    constexpr mint operator+(const mint rhs)const noexcept{return mint(*this) += rhs;}
-    constexpr mint operator-(const mint rhs)const noexcept{return mint(*this)-=rhs;}
-    constexpr mint operator*(const mint rhs) const noexcept {return mint(*this) *= rhs;}
-    constexpr mint operator/(const mint rhs) const noexcept {return mint(*this) /= rhs;}
-    constexpr mint &operator+=(const mint rhs) noexcept {
-        a += rhs.a;
-        if (a >= get_mod())a -= get_mod();
-        return *this;
+constexpr int inf = 1001001001;
+constexpr long long infLL = 4004004004004004004LL;
+
+template <typename T>
+int sz(const T &t) {
+  return t.size();
+}
+
+template <typename T, typename U>
+inline bool amin(T &x, U y) {
+  return (y < x) ? (x = y, true) : false;
+}
+template <typename T, typename U>
+inline bool amax(T &x, U y) {
+  return (x < y) ? (x = y, true) : false;
+}
+
+template <typename T>
+inline T Max(const vector<T> &v) {
+  return *max_element(begin(v), end(v));
+}
+template <typename T>
+inline T Min(const vector<T> &v) {
+  return *min_element(begin(v), end(v));
+}
+template <typename T>
+inline long long Sum(const vector<T> &v) {
+  return accumulate(begin(v), end(v), 0LL);
+}
+
+template <typename T>
+int lb(const vector<T> &v, const T &a) {
+  return lower_bound(begin(v), end(v), a) - begin(v);
+}
+template <typename T>
+int ub(const vector<T> &v, const T &a) {
+  return upper_bound(begin(v), end(v), a) - begin(v);
+}
+
+constexpr long long TEN(int n) {
+  long long ret = 1, x = 10;
+  for (; n; x *= x, n >>= 1) ret *= (n & 1 ? x : 1);
+  return ret;
+}
+
+template <typename T, typename U>
+pair<T, U> mkp(const T &t, const U &u) {
+  return make_pair(t, u);
+}
+
+template <typename T>
+vector<T> mkrui(const vector<T> &v, bool rev = false) {
+  vector<T> ret(v.size() + 1);
+  if (rev) {
+    for (int i = int(v.size()) - 1; i >= 0; i--) ret[i] = v[i] + ret[i + 1];
+  } else {
+    for (int i = 0; i < int(v.size()); i++) ret[i + 1] = ret[i] + v[i];
+  }
+  return ret;
+};
+
+template <typename T>
+vector<T> mkuni(const vector<T> &v) {
+  vector<T> ret(v);
+  sort(ret.begin(), ret.end());
+  ret.erase(unique(ret.begin(), ret.end()), ret.end());
+  return ret;
+}
+
+template <typename F>
+vector<int> mkord(int N, F f) {
+  vector<int> ord(N);
+  iota(begin(ord), end(ord), 0);
+  sort(begin(ord), end(ord), f);
+  return ord;
+}
+
+template <typename T>
+vector<int> mkinv(vector<T> &v) {
+  int max_val = *max_element(begin(v), end(v));
+  vector<int> inv(max_val + 1, -1);
+  for (int i = 0; i < (int)v.size(); i++) inv[v[i]] = i;
+  return inv;
+}
+
+}  // namespace Nyaan
+#line 58 "template/template.hpp"
+
+// bit operation
+#line 1 "template/bitop.hpp"
+namespace Nyaan {
+__attribute__((target("popcnt"))) inline int popcnt(const u64 &a) {
+  return _mm_popcnt_u64(a);
+}
+inline int lsb(const u64 &a) { return a ? __builtin_ctzll(a) : 64; }
+inline int ctz(const u64 &a) { return a ? __builtin_ctzll(a) : 64; }
+inline int msb(const u64 &a) { return a ? 63 - __builtin_clzll(a) : -1; }
+template <typename T>
+inline int gbit(const T &a, int i) {
+  return (a >> i) & 1;
+}
+template <typename T>
+inline void sbit(T &a, int i, bool b) {
+  if (gbit(a, i) != b) a ^= T(1) << i;
+}
+constexpr long long PW(int n) { return 1LL << n; }
+constexpr long long MSK(int n) { return (1LL << n) - 1; }
+}  // namespace Nyaan
+#line 61 "template/template.hpp"
+
+// inout
+#line 1 "template/inout.hpp"
+namespace Nyaan {
+
+template <typename T, typename U>
+ostream &operator<<(ostream &os, const pair<T, U> &p) {
+  os << p.first << " " << p.second;
+  return os;
+}
+template <typename T, typename U>
+istream &operator>>(istream &is, pair<T, U> &p) {
+  is >> p.first >> p.second;
+  return is;
+}
+
+template <typename T>
+ostream &operator<<(ostream &os, const vector<T> &v) {
+  int s = (int)v.size();
+  for (int i = 0; i < s; i++) os << (i ? " " : "") << v[i];
+  return os;
+}
+template <typename T>
+istream &operator>>(istream &is, vector<T> &v) {
+  for (auto &x : v) is >> x;
+  return is;
+}
+
+void in() {}
+template <typename T, class... U>
+void in(T &t, U &... u) {
+  cin >> t;
+  in(u...);
+}
+
+void out() { cout << "\n"; }
+template <typename T, class... U, char sep = ' '>
+void out(const T &t, const U &... u) {
+  cout << t;
+  if (sizeof...(u)) cout << sep;
+  out(u...);
+}
+
+void outr() {}
+template <typename T, class... U, char sep = ' '>
+void outr(const T &t, const U &... u) {
+  cout << t;
+  outr(u...);
+}
+
+struct IoSetupNya {
+  IoSetupNya() {
+    cin.tie(nullptr);
+    ios::sync_with_stdio(false);
+    cout << fixed << setprecision(15);
+    cerr << fixed << setprecision(7);
+  }
+} iosetupnya;
+
+}  // namespace Nyaan
+#line 64 "template/template.hpp"
+
+// debug
+#line 1 "template/debug.hpp"
+namespace DebugImpl {
+
+template <typename U, typename = void>
+struct is_specialize : false_type {};
+template <typename U>
+struct is_specialize<
+    U, typename conditional<false, typename U::iterator, void>::type>
+    : true_type {};
+template <typename U>
+struct is_specialize<
+    U, typename conditional<false, decltype(U::first), void>::type>
+    : true_type {};
+template <typename U>
+struct is_specialize<U, enable_if_t<is_integral<U>::value, void>> : true_type {
+};
+
+void dump(const char& t) { cerr << t; }
+
+void dump(const string& t) { cerr << t; }
+
+void dump(const bool& t) { cerr << (t ? "true" : "false"); }
+
+template <typename U,
+          enable_if_t<!is_specialize<U>::value, nullptr_t> = nullptr>
+void dump(const U& t) {
+  cerr << t;
+}
+
+template <typename T>
+void dump(const T& t, enable_if_t<is_integral<T>::value>* = nullptr) {
+  string res;
+  if (t == Nyaan::inf) res = "inf";
+  if constexpr (is_signed<T>::value) {
+    if (t == -Nyaan::inf) res = "-inf";
+  }
+  if constexpr (sizeof(T) == 8) {
+    if (t == Nyaan::infLL) res = "inf";
+    if constexpr (is_signed<T>::value) {
+      if (t == -Nyaan::infLL) res = "-inf";
     }
-    constexpr mint &operator-=(const mint rhs) noexcept {
-        if (a<rhs.a)a += get_mod();
-        a -= rhs.a;
-        return *this;
+  }
+  if (res.empty()) res = to_string(t);
+  cerr << res;
+}
+
+template <typename T, typename U>
+void dump(const pair<T, U>&);
+template <typename T>
+void dump(const pair<T*, int>&);
+
+template <typename T>
+void dump(const T& t,
+          enable_if_t<!is_void<typename T::iterator>::value>* = nullptr) {
+  cerr << "[ ";
+  for (auto it = t.begin(); it != t.end();) {
+    dump(*it);
+    cerr << (++it == t.end() ? "" : ", ");
+  }
+  cerr << " ]";
+}
+
+template <typename T, typename U>
+void dump(const pair<T, U>& t) {
+  cerr << "( ";
+  dump(t.first);
+  cerr << ", ";
+  dump(t.second);
+  cerr << " )";
+}
+
+template <typename T>
+void dump(const pair<T*, int>& t) {
+  cerr << "[ ";
+  for (int i = 0; i < t.second; i++) {
+    dump(t.first[i]);
+    cerr << (i == t.second - 1 ? "" : ", ");
+  }
+  cerr << " ]";
+}
+
+void trace() { cerr << endl; }
+template <typename Head, typename... Tail>
+void trace(Head&& head, Tail&&... tail) {
+  cerr << " ";
+  dump(head);
+  if (sizeof...(tail) != 0) cerr << ",";
+  trace(forward<Tail>(tail)...);
+}
+
+}  // namespace DebugImpl
+
+#ifdef NyaanDebug
+#define trc(...)                            \
+  do {                                      \
+    cerr << "## " << #__VA_ARGS__ << " = "; \
+    DebugImpl::trace(__VA_ARGS__);          \
+  } while (0)
+#else
+#define trc(...) (void(0))
+#endif
+#line 67 "template/template.hpp"
+
+// macro
+#line 1 "template/macro.hpp"
+#define each(x, v) for (auto&& x : v)
+#define each2(x, y, v) for (auto&& [x, y] : v)
+#define all(v) (v).begin(), (v).end()
+#define rep(i, N) for (long long i = 0; i < (long long)(N); i++)
+#define repr(i, N) for (long long i = (long long)(N)-1; i >= 0; i--)
+#define rep1(i, N) for (long long i = 1; i <= (long long)(N); i++)
+#define repr1(i, N) for (long long i = (N); (long long)(i) > 0; i--)
+#define reg(i, a, b) for (long long i = (a); i < (b); i++)
+#define regr(i, a, b) for (long long i = (b)-1; i >= (a); i--)
+#define fi first
+#define se second
+#define ini(...)   \
+  int __VA_ARGS__; \
+  in(__VA_ARGS__)
+#define inl(...)         \
+  long long __VA_ARGS__; \
+  in(__VA_ARGS__)
+#define ins(...)      \
+  string __VA_ARGS__; \
+  in(__VA_ARGS__)
+#define in2(s, t)                           \
+  for (int i = 0; i < (int)s.size(); i++) { \
+    in(s[i], t[i]);                         \
+  }
+#define in3(s, t, u)                        \
+  for (int i = 0; i < (int)s.size(); i++) { \
+    in(s[i], t[i], u[i]);                   \
+  }
+#define in4(s, t, u, v)                     \
+  for (int i = 0; i < (int)s.size(); i++) { \
+    in(s[i], t[i], u[i], v[i]);             \
+  }
+#define die(...)             \
+  do {                       \
+    Nyaan::out(__VA_ARGS__); \
+    return;                  \
+  } while (0)
+#line 70 "template/template.hpp"
+
+namespace Nyaan {
+void solve();
+}
+int main() { Nyaan::solve(); }
+#line 2 "fps/formal-power-series.hpp"
+
+template <typename mint>
+struct FormalPowerSeries : vector<mint> {
+  using vector<mint>::vector;
+  using FPS = FormalPowerSeries;
+
+  FPS &operator+=(const FPS &r) {
+    if (r.size() > this->size()) this->resize(r.size());
+    for (int i = 0; i < (int)r.size(); i++) (*this)[i] += r[i];
+    return *this;
+  }
+
+  FPS &operator+=(const mint &r) {
+    if (this->empty()) this->resize(1);
+    (*this)[0] += r;
+    return *this;
+  }
+
+  FPS &operator-=(const FPS &r) {
+    if (r.size() > this->size()) this->resize(r.size());
+    for (int i = 0; i < (int)r.size(); i++) (*this)[i] -= r[i];
+    return *this;
+  }
+
+  FPS &operator-=(const mint &r) {
+    if (this->empty()) this->resize(1);
+    (*this)[0] -= r;
+    return *this;
+  }
+
+  FPS &operator*=(const mint &v) {
+    for (int k = 0; k < (int)this->size(); k++) (*this)[k] *= v;
+    return *this;
+  }
+
+  FPS &operator/=(const FPS &r) {
+    if (this->size() < r.size()) {
+      this->clear();
+      return *this;
     }
-    constexpr mint &operator*=(const mint rhs) noexcept {
-        a = a * rhs.a % get_mod();
-        return *this;
+    int n = this->size() - r.size() + 1;
+    if ((int)r.size() <= 64) {
+      FPS f(*this), g(r);
+      g.shrink();
+      mint coeff = g.back().inverse();
+      for (auto &x : g) x *= coeff;
+      int deg = (int)f.size() - (int)g.size() + 1;
+      int gs = g.size();
+      FPS quo(deg);
+      for (int i = deg - 1; i >= 0; i--) {
+        quo[i] = f[i + gs - 1];
+        for (int j = 0; j < gs; j++) f[i + j] -= quo[i] * g[j];
+      }
+      *this = quo * coeff;
+      this->resize(n, mint(0));
+      return *this;
     }
-    constexpr mint operator++(int) noexcept {
-        a += 1;
-        if (a >= get_mod())a -= get_mod();
-        return *this;
+    return *this = ((*this).rev().pre(n) * r.rev().inv(n)).pre(n).rev();
+  }
+
+  FPS &operator%=(const FPS &r) {
+    *this -= *this / r * r;
+    shrink();
+    return *this;
+  }
+
+  FPS operator+(const FPS &r) const { return FPS(*this) += r; }
+  FPS operator+(const mint &v) const { return FPS(*this) += v; }
+  FPS operator-(const FPS &r) const { return FPS(*this) -= r; }
+  FPS operator-(const mint &v) const { return FPS(*this) -= v; }
+  FPS operator*(const FPS &r) const { return FPS(*this) *= r; }
+  FPS operator*(const mint &v) const { return FPS(*this) *= v; }
+  FPS operator/(const FPS &r) const { return FPS(*this) /= r; }
+  FPS operator%(const FPS &r) const { return FPS(*this) %= r; }
+  FPS operator-() const {
+    FPS ret(this->size());
+    for (int i = 0; i < (int)this->size(); i++) ret[i] = -(*this)[i];
+    return ret;
+  }
+
+  void shrink() {
+    while (this->size() && this->back() == mint(0)) this->pop_back();
+  }
+
+  FPS rev() const {
+    FPS ret(*this);
+    reverse(begin(ret), end(ret));
+    return ret;
+  }
+
+  FPS dot(FPS r) const {
+    FPS ret(min(this->size(), r.size()));
+    for (int i = 0; i < (int)ret.size(); i++) ret[i] = (*this)[i] * r[i];
+    return ret;
+  }
+
+  FPS pre(int sz) const {
+    return FPS(begin(*this), begin(*this) + min((int)this->size(), sz));
+  }
+
+  FPS operator>>(int sz) const {
+    if ((int)this->size() <= sz) return {};
+    FPS ret(*this);
+    ret.erase(ret.begin(), ret.begin() + sz);
+    return ret;
+  }
+
+  FPS operator<<(int sz) const {
+    FPS ret(*this);
+    ret.insert(ret.begin(), sz, mint(0));
+    return ret;
+  }
+
+  FPS diff() const {
+    const int n = (int)this->size();
+    FPS ret(max(0, n - 1));
+    mint one(1), coeff(1);
+    for (int i = 1; i < n; i++) {
+      ret[i - 1] = (*this)[i] * coeff;
+      coeff += one;
     }
-    constexpr mint operator--(int) noexcept {
-        if (a<1)a += get_mod();
-        a -= 1;
-        return *this;
+    return ret;
+  }
+
+  FPS integral() const {
+    const int n = (int)this->size();
+    FPS ret(n + 1);
+    ret[0] = mint(0);
+    if (n > 0) ret[1] = mint(1);
+    auto mod = mint::get_mod();
+    for (int i = 2; i <= n; i++) ret[i] = (-ret[mod % i]) * (mod / i);
+    for (int i = 0; i < n; i++) ret[i + 1] *= (*this)[i];
+    return ret;
+  }
+
+  mint eval(mint x) const {
+    mint r = 0, w = 1;
+    for (auto &v : *this) r += w * v, w *= x;
+    return r;
+  }
+
+  FPS log(int deg = -1) const {
+    assert((*this)[0] == mint(1));
+    if (deg == -1) deg = (int)this->size();
+    return (this->diff() * this->inv(deg)).pre(deg - 1).integral();
+  }
+
+  FPS pow(int64_t k, int deg = -1) const {
+    const int n = (int)this->size();
+    if (deg == -1) deg = n;
+    if (k == 0) {
+      FPS ret(deg);
+      if (deg) ret[0] = 1;
+      return ret;
     }
-    constexpr mint &operator/=(mint rhs) noexcept {
-        u64 exp=get_mod()-2;
-        while (exp) {
-            if (exp % 2) {
-                *this *= rhs;
-            }
-            rhs *= rhs;
-            exp /= 2;
-        }
-        return *this;
-    }
-    constexpr bool operator==(mint x) noexcept {
-        return a==x.a;
-    }
-    constexpr bool operator!=(mint x) noexcept {
-        return a!=x.a;
-    }
-    constexpr bool operator<(mint x) noexcept {
-        return a<x.a;
-    }
-    constexpr bool operator>(mint x) noexcept {
-        return a>x.a;
-    }
-    constexpr bool operator<=(mint x) noexcept {
-        return a<=x.a;
-    }
-    constexpr bool operator>=(mint x) noexcept {
-        return a>=x.a;
-    }
-    constexpr static int root(){
-        mint root = 2;
-        while(root.pow((get_mod()-1)>>1).a==1)root++;
-        return root.a;
-    }
-    constexpr mint pow(long long n){
-        long long x=a;
-        mint ret = 1;
-        while(n>0) {
-            if(n&1)(ret*=x);
-            (x*=x)%=get_mod();
-            n>>=1;
-        }
+    for (int i = 0; i < n; i++) {
+      if ((*this)[i] != mint(0)) {
+        mint rev = mint(1) / (*this)[i];
+        FPS ret = (((*this * rev) >> i).log(deg) * k).exp(deg);
+        ret *= (*this)[i].pow(k);
+        ret = (ret << (i * k)).pre(deg);
+        if ((int)ret.size() < deg) ret.resize(deg, mint(0));
         return ret;
+      }
+      if (__int128_t(i + 1) * k >= deg) return FPS(deg, mint(0));
     }
-    constexpr mint inv(){
-        return pow(get_mod()-2);
-    }
-    static vector<mint> fac,ifac;
-    static bool init;
-    constexpr static int mx=10000001;
-    void build(){
-        init=0;
-        fac.resize(mx);
-        ifac.resize(mx);
-        fac[0]=1,ifac[0]=1;
-        for(int i=1;i<mx;i++)fac[i]=fac[i-1]*i;
-        ifac[mx-1]=fac[mx-1].inv();
-        for(int i=mx-2;i>=0;i--)ifac[i]=ifac[i+1]*(i+1);
-    }
-    mint comb(long long b){
-        if(init)build();
-        if(a==0&&b==0)return 1;
-        if((long long)a<b)return 0;
-        return fac[a]*ifac[a-b]*ifac[b];
-    }
-    mint fact(){
-        if(init)build();
-        return fac[a];
-    }
-    mint fact_inv(){
-        if(init)build();
-        return ifac[a];
-    }
-    friend ostream& operator<<(ostream& lhs, const mint& rhs) noexcept {
-        lhs << rhs.a;
-        return lhs;
-    }
-    friend istream& operator>>(istream& lhs,mint& rhs) noexcept {
-        lhs >> rhs.a;
-        return lhs;
-    }
-    constexpr static u64 get_mod(){return MOD;}
-};
-vector<mint> mint::fac;
-vector<mint> mint::ifac;
-bool mint::init=1;
+    return FPS(deg, mint(0));
+  }
 
-int main(){
+  static void *ntt_ptr;
+  static void set_fft();
+  FPS &operator*=(const FPS &r);
+  void ntt();
+  void intt();
+  void ntt_doubling();
+  static int ntt_pr();
+  FPS inv(int deg = -1) const;
+  FPS exp(int deg = -1) const;
+};
+template <typename mint>
+void *FormalPowerSeries<mint>::ntt_ptr = nullptr;
+
+/**
+ * @brief 多項式/形式的冪級数ライブラリ
+ * @docs docs/fps/formal-power-series.md
+ */
+#line 2 "fps/fps-composition.hpp"
+
+#line 2 "modulo/binomial.hpp"
+
+template <typename T>
+struct Binomial {
+  vector<T> f, g, h;
+  Binomial(int MAX = 0) {
+    assert(T::get_mod() != 0 && "Binomial<mint>()");
+    f.resize(1, T{1});
+    g.resize(1, T{1});
+    h.resize(1, T{1});
+    while (MAX >= (int)f.size()) extend();
+  }
+
+  void extend() {
+    int n = f.size();
+    int m = n * 2;
+    f.resize(m);
+    g.resize(m);
+    h.resize(m);
+    for (int i = n; i < m; i++) f[i] = f[i - 1] * T(i);
+    g[m - 1] = f[m - 1].inverse();
+    h[m - 1] = g[m - 1] * f[m - 2];
+    for (int i = m - 2; i >= n; i--) {
+      g[i] = g[i + 1] * T(i + 1);
+      h[i] = g[i] * f[i - 1];
+    }
+  }
+
+  T fac(int i) {
+    if (i < 0) return T(0);
+    while (i >= (int)f.size()) extend();
+    return f[i];
+  }
+
+  T finv(int i) {
+    if (i < 0) return T(0);
+    while (i >= (int)g.size()) extend();
+    return g[i];
+  }
+
+  T inv(int i) {
+    if (i < 0) return -inv(-i);
+    while (i >= (int)h.size()) extend();
+    return h[i];
+  }
+
+  T C(int n, int r) {
+    if (n < 0 || n < r || r < 0) return T(0);
+    return fac(n) * finv(n - r) * finv(r);
+  }
+
+  inline T operator()(int n, int r) { return C(n, r); }
+
+  template <typename I>
+  T multinomial(const vector<I>& r) {
+    static_assert(is_integral<I>::value == true);
+    int n = 0;
+    for (auto& x : r) {
+      if (x < 0) return T(0);
+      n += x;
+    }
+    T res = fac(n);
+    for (auto& x : r) res *= finv(x);
+    return res;
+  }
+
+  template <typename I>
+  T operator()(const vector<I>& r) {
+    return multinomial(r);
+  }
+
+  T C_naive(int n, int r) {
+    if (n < 0 || n < r || r < 0) return T(0);
+    T ret = T(1);
+    r = min(r, n - r);
+    for (int i = 1; i <= r; ++i) ret *= inv(i) * (n--);
+    return ret;
+  }
+
+  T P(int n, int r) {
+    if (n < 0 || n < r || r < 0) return T(0);
+    return fac(n) * finv(n - r);
+  }
+
+  T H(int n, int r) {
+    if (n < 0 || r < 0) return T(0);
+    return r == 0 ? 1 : C(n + r - 1, r);
+  }
+};
+#line 5 "fps/fps-composition.hpp"
+
+// find Q(P(x)) mod x ^ min(deg(P), deg(Q))
+template <typename mint>
+FormalPowerSeries<mint> Composition(FormalPowerSeries<mint> P,
+                                    FormalPowerSeries<mint> Q,
+                                    Binomial<mint>& C, int deg = -1) {
+  using fps = FormalPowerSeries<mint>;
+  int N = (deg == -1) ? min(P.size(), Q.size()) : deg;
+  if (N == 0) return fps{};
+  P.shrink();
+  if (P.size() == 0) {
+    fps R(N, mint(0));
+    R[0] = Q.empty() ? mint(0) : Q[0];
+    return R;
+  }
+  if (N == 1) return fps{Q.eval(P[0])};
+
+  P.resize(N, mint(0));
+  Q.resize(N, mint(0));
+  int M = max<int>(1, sqrt(N / log2(N)));
+  int L = (N + M - 1) / M;
+  fps Pm = fps{begin(P), begin(P) + M};
+  fps Pr = fps{begin(P) + M, end(P)};
+
+  int J = 31 - __builtin_clz(N - 1) + 1;
+  vector<fps> pms(J);
+  pms[0] = Pm;
+  for (int i = 1; i < J; i++) pms[i] = (pms[i - 1] * pms[i - 1]).pre(N);
+
+  auto comp = [&](auto rec, int left, int j) -> fps {
+    if (j == 1) {
+      mint Q1 = left + 0 < (int)Q.size() ? Q[left + 0] : mint(0);
+      mint Q2 = left + 1 < (int)Q.size() ? Q[left + 1] : mint(0);
+      return (pms[0].pre(N) * Q2 + Q1).pre(N);
+    }
+    if (N <= left) return fps{};
+    fps Q1 = rec(rec, left, j - 1);
+    fps Q2 = rec(rec, left + (1 << (j - 1)), j - 1);
+    return (Q1 + pms[j - 1].pre(N) * Q2).pre(N);
+  };
+
+  fps QPm = comp(comp, 0, J);
+  fps R = QPm;
+  fps pw_Pr{mint(1)};
+  fps dPm = Pm.diff();
+  dPm.shrink();
+  // if dPm[0] == 0, dPm.inv() is undefined
+  int deg_dPm = 0;
+  while (deg_dPm != (int)dPm.size() && dPm[deg_dPm] == mint(0)) deg_dPm++;
+  fps idPm = dPm.empty() ? fps{} : (dPm >> deg_dPm).inv(N);
+
+  for (int l = 1, d = M; l <= L && d < N; l++, d += M) {
+    pw_Pr = (pw_Pr * Pr).pre(N - d);
+    if (dPm.empty()) {
+      R += (pw_Pr * Q[l]) << d;
+    } else {
+      idPm.resize(N - d);
+      QPm = ((QPm.diff() >> deg_dPm) * idPm).pre(N - d);
+      R += ((QPm * pw_Pr).pre(N - d) * C.finv(l)) << d;
+    };
+  }
+  R.resize(N, mint(0));
+  return R;
+}
+
+/**
+ * @brief 関数の合成( $\mathrm{O}\left((N \log N)^{\frac{3}{2}}\right)$ )
+ * @docs docs/fps/fps-composition.md
+ */
+#line 2 "fps/ntt-friendly-fps.hpp"
+
+#line 2 "ntt/ntt.hpp"
+
+template <typename mint>
+struct NTT {
+  static constexpr uint32_t get_pr() {
+    uint32_t _mod = mint::get_mod();
+    using u64 = uint64_t;
+    u64 ds[32] = {};
+    int idx = 0;
+    u64 m = _mod - 1;
+    for (u64 i = 2; i * i <= m; ++i) {
+      if (m % i == 0) {
+        ds[idx++] = i;
+        while (m % i == 0) m /= i;
+      }
+    }
+    if (m != 1) ds[idx++] = m;
+
+    uint32_t _pr = 2;
+    while (1) {
+      int flg = 1;
+      for (int i = 0; i < idx; ++i) {
+        u64 a = _pr, b = (_mod - 1) / ds[i], r = 1;
+        while (b) {
+          if (b & 1) r = r * a % _mod;
+          a = a * a % _mod;
+          b >>= 1;
+        }
+        if (r == 1) {
+          flg = 0;
+          break;
+        }
+      }
+      if (flg == 1) break;
+      ++_pr;
+    }
+    return _pr;
+  };
+
+  static constexpr uint32_t mod = mint::get_mod();
+  static constexpr uint32_t pr = get_pr();
+  static constexpr int level = __builtin_ctzll(mod - 1);
+  mint dw[level], dy[level];
+
+  void setwy(int k) {
+    mint w[level], y[level];
+    w[k - 1] = mint(pr).pow((mod - 1) / (1 << k));
+    y[k - 1] = w[k - 1].inverse();
+    for (int i = k - 2; i > 0; --i)
+      w[i] = w[i + 1] * w[i + 1], y[i] = y[i + 1] * y[i + 1];
+    dw[1] = w[1], dy[1] = y[1], dw[2] = w[2], dy[2] = y[2];
+    for (int i = 3; i < k; ++i) {
+      dw[i] = dw[i - 1] * y[i - 2] * w[i];
+      dy[i] = dy[i - 1] * w[i - 2] * y[i];
+    }
+  }
+
+  NTT() { setwy(level); }
+
+  void fft4(vector<mint> &a, int k) {
+    if ((int)a.size() <= 1) return;
+    if (k == 1) {
+      mint a1 = a[1];
+      a[1] = a[0] - a[1];
+      a[0] = a[0] + a1;
+      return;
+    }
+    if (k & 1) {
+      int v = 1 << (k - 1);
+      for (int j = 0; j < v; ++j) {
+        mint ajv = a[j + v];
+        a[j + v] = a[j] - ajv;
+        a[j] += ajv;
+      }
+    }
+    int u = 1 << (2 + (k & 1));
+    int v = 1 << (k - 2 - (k & 1));
+    mint one = mint(1);
+    mint imag = dw[1];
+    while (v) {
+      // jh = 0
+      {
+        int j0 = 0;
+        int j1 = v;
+        int j2 = j1 + v;
+        int j3 = j2 + v;
+        for (; j0 < v; ++j0, ++j1, ++j2, ++j3) {
+          mint t0 = a[j0], t1 = a[j1], t2 = a[j2], t3 = a[j3];
+          mint t0p2 = t0 + t2, t1p3 = t1 + t3;
+          mint t0m2 = t0 - t2, t1m3 = (t1 - t3) * imag;
+          a[j0] = t0p2 + t1p3, a[j1] = t0p2 - t1p3;
+          a[j2] = t0m2 + t1m3, a[j3] = t0m2 - t1m3;
+        }
+      }
+      // jh >= 1
+      mint ww = one, xx = one * dw[2], wx = one;
+      for (int jh = 4; jh < u;) {
+        ww = xx * xx, wx = ww * xx;
+        int j0 = jh * v;
+        int je = j0 + v;
+        int j2 = je + v;
+        for (; j0 < je; ++j0, ++j2) {
+          mint t0 = a[j0], t1 = a[j0 + v] * xx, t2 = a[j2] * ww,
+               t3 = a[j2 + v] * wx;
+          mint t0p2 = t0 + t2, t1p3 = t1 + t3;
+          mint t0m2 = t0 - t2, t1m3 = (t1 - t3) * imag;
+          a[j0] = t0p2 + t1p3, a[j0 + v] = t0p2 - t1p3;
+          a[j2] = t0m2 + t1m3, a[j2 + v] = t0m2 - t1m3;
+        }
+        xx *= dw[__builtin_ctzll((jh += 4))];
+      }
+      u <<= 2;
+      v >>= 2;
+    }
+  }
+
+  void ifft4(vector<mint> &a, int k) {
+    if ((int)a.size() <= 1) return;
+    if (k == 1) {
+      mint a1 = a[1];
+      a[1] = a[0] - a[1];
+      a[0] = a[0] + a1;
+      return;
+    }
+    int u = 1 << (k - 2);
+    int v = 1;
+    mint one = mint(1);
+    mint imag = dy[1];
+    while (u) {
+      // jh = 0
+      {
+        int j0 = 0;
+        int j1 = v;
+        int j2 = v + v;
+        int j3 = j2 + v;
+        for (; j0 < v; ++j0, ++j1, ++j2, ++j3) {
+          mint t0 = a[j0], t1 = a[j1], t2 = a[j2], t3 = a[j3];
+          mint t0p1 = t0 + t1, t2p3 = t2 + t3;
+          mint t0m1 = t0 - t1, t2m3 = (t2 - t3) * imag;
+          a[j0] = t0p1 + t2p3, a[j2] = t0p1 - t2p3;
+          a[j1] = t0m1 + t2m3, a[j3] = t0m1 - t2m3;
+        }
+      }
+      // jh >= 1
+      mint ww = one, xx = one * dy[2], yy = one;
+      u <<= 2;
+      for (int jh = 4; jh < u;) {
+        ww = xx * xx, yy = xx * imag;
+        int j0 = jh * v;
+        int je = j0 + v;
+        int j2 = je + v;
+        for (; j0 < je; ++j0, ++j2) {
+          mint t0 = a[j0], t1 = a[j0 + v], t2 = a[j2], t3 = a[j2 + v];
+          mint t0p1 = t0 + t1, t2p3 = t2 + t3;
+          mint t0m1 = (t0 - t1) * xx, t2m3 = (t2 - t3) * yy;
+          a[j0] = t0p1 + t2p3, a[j2] = (t0p1 - t2p3) * ww;
+          a[j0 + v] = t0m1 + t2m3, a[j2 + v] = (t0m1 - t2m3) * ww;
+        }
+        xx *= dy[__builtin_ctzll(jh += 4)];
+      }
+      u >>= 4;
+      v <<= 2;
+    }
+    if (k & 1) {
+      u = 1 << (k - 1);
+      for (int j = 0; j < u; ++j) {
+        mint ajv = a[j] - a[j + u];
+        a[j] += a[j + u];
+        a[j + u] = ajv;
+      }
+    }
+  }
+
+  void ntt(vector<mint> &a) {
+    if ((int)a.size() <= 1) return;
+    fft4(a, __builtin_ctz(a.size()));
+  }
+
+  void intt(vector<mint> &a) {
+    if ((int)a.size() <= 1) return;
+    ifft4(a, __builtin_ctz(a.size()));
+    mint iv = mint(a.size()).inverse();
+    for (auto &x : a) x *= iv;
+  }
+
+  vector<mint> multiply(const vector<mint> &a, const vector<mint> &b) {
+    int l = a.size() + b.size() - 1;
+    if (min<int>(a.size(), b.size()) <= 40) {
+      vector<mint> s(l);
+      for (int i = 0; i < (int)a.size(); ++i)
+        for (int j = 0; j < (int)b.size(); ++j) s[i + j] += a[i] * b[j];
+      return s;
+    }
+    int k = 2, M = 4;
+    while (M < l) M <<= 1, ++k;
+    setwy(k);
+    vector<mint> s(M), t(M);
+    for (int i = 0; i < (int)a.size(); ++i) s[i] = a[i];
+    for (int i = 0; i < (int)b.size(); ++i) t[i] = b[i];
+    fft4(s, k);
+    fft4(t, k);
+    for (int i = 0; i < M; ++i) s[i] *= t[i];
+    ifft4(s, k);
+    s.resize(l);
+    mint invm = mint(M).inverse();
+    for (int i = 0; i < l; ++i) s[i] *= invm;
+    return s;
+  }
+
+  void ntt_doubling(vector<mint> &a) {
+    int M = (int)a.size();
+    auto b = a;
+    intt(b);
+    mint r = 1, zeta = mint(pr).pow((mint::get_mod() - 1) / (M << 1));
+    for (int i = 0; i < M; i++) b[i] *= r, r *= zeta;
+    ntt(b);
+    copy(begin(b), end(b), back_inserter(a));
+  }
+};
+#line 5 "fps/ntt-friendly-fps.hpp"
+
+template <typename mint>
+void FormalPowerSeries<mint>::set_fft() {
+  if (!ntt_ptr) ntt_ptr = new NTT<mint>;
+}
+
+template <typename mint>
+FormalPowerSeries<mint>& FormalPowerSeries<mint>::operator*=(
+    const FormalPowerSeries<mint>& r) {
+  if (this->empty() || r.empty()) {
+    this->clear();
+    return *this;
+  }
+  set_fft();
+  auto ret = static_cast<NTT<mint>*>(ntt_ptr)->multiply(*this, r);
+  return *this = FormalPowerSeries<mint>(ret.begin(), ret.end());
+}
+
+template <typename mint>
+void FormalPowerSeries<mint>::ntt() {
+  set_fft();
+  static_cast<NTT<mint>*>(ntt_ptr)->ntt(*this);
+}
+
+template <typename mint>
+void FormalPowerSeries<mint>::intt() {
+  set_fft();
+  static_cast<NTT<mint>*>(ntt_ptr)->intt(*this);
+}
+
+template <typename mint>
+void FormalPowerSeries<mint>::ntt_doubling() {
+  set_fft();
+  static_cast<NTT<mint>*>(ntt_ptr)->ntt_doubling(*this);
+}
+
+template <typename mint>
+int FormalPowerSeries<mint>::ntt_pr() {
+  set_fft();
+  return static_cast<NTT<mint>*>(ntt_ptr)->pr;
+}
+
+template <typename mint>
+FormalPowerSeries<mint> FormalPowerSeries<mint>::inv(int deg) const {
+  assert((*this)[0] != mint(0));
+  if (deg == -1) deg = (int)this->size();
+  FormalPowerSeries<mint> res(deg);
+  res[0] = {mint(1) / (*this)[0]};
+  for (int d = 1; d < deg; d <<= 1) {
+    FormalPowerSeries<mint> f(2 * d), g(2 * d);
+    for (int j = 0; j < min((int)this->size(), 2 * d); j++) f[j] = (*this)[j];
+    for (int j = 0; j < d; j++) g[j] = res[j];
+    f.ntt();
+    g.ntt();
+    for (int j = 0; j < 2 * d; j++) f[j] *= g[j];
+    f.intt();
+    for (int j = 0; j < d; j++) f[j] = 0;
+    f.ntt();
+    for (int j = 0; j < 2 * d; j++) f[j] *= g[j];
+    f.intt();
+    for (int j = d; j < min(2 * d, deg); j++) res[j] = -f[j];
+  }
+  return res.pre(deg);
+}
+
+template <typename mint>
+FormalPowerSeries<mint> FormalPowerSeries<mint>::exp(int deg) const {
+  using fps = FormalPowerSeries<mint>;
+  assert((*this).size() == 0 || (*this)[0] == mint(0));
+  if (deg == -1) deg = this->size();
+
+  fps inv;
+  inv.reserve(deg + 1);
+  inv.push_back(mint(0));
+  inv.push_back(mint(1));
+
+  auto inplace_integral = [&](fps& F) -> void {
+    const int n = (int)F.size();
+    auto mod = mint::get_mod();
+    while ((int)inv.size() <= n) {
+      int i = inv.size();
+      inv.push_back((-inv[mod % i]) * (mod / i));
+    }
+    F.insert(begin(F), mint(0));
+    for (int i = 1; i <= n; i++) F[i] *= inv[i];
+  };
+
+  auto inplace_diff = [](fps& F) -> void {
+    if (F.empty()) return;
+    F.erase(begin(F));
+    mint coeff = 1, one = 1;
+    for (int i = 0; i < (int)F.size(); i++) {
+      F[i] *= coeff;
+      coeff += one;
+    }
+  };
+
+  fps b{1, 1 < (int)this->size() ? (*this)[1] : 0}, c{1}, z1, z2{1, 1};
+  for (int m = 2; m < deg; m *= 2) {
+    auto y = b;
+    y.resize(2 * m);
+    y.ntt();
+    z1 = z2;
+    fps z(m);
+    for (int i = 0; i < m; ++i) z[i] = y[i] * z1[i];
+    z.intt();
+    fill(begin(z), begin(z) + m / 2, mint(0));
+    z.ntt();
+    for (int i = 0; i < m; ++i) z[i] *= -z1[i];
+    z.intt();
+    c.insert(end(c), begin(z) + m / 2, end(z));
+    z2 = c;
+    z2.resize(2 * m);
+    z2.ntt();
+    fps x(begin(*this), begin(*this) + min<int>(this->size(), m));
+    x.resize(m);
+    inplace_diff(x);
+    x.push_back(mint(0));
+    x.ntt();
+    for (int i = 0; i < m; ++i) x[i] *= y[i];
+    x.intt();
+    x -= b.diff();
+    x.resize(2 * m);
+    for (int i = 0; i < m - 1; ++i) x[m + i] = x[i], x[i] = mint(0);
+    x.ntt();
+    for (int i = 0; i < 2 * m; ++i) x[i] *= z2[i];
+    x.intt();
+    x.pop_back();
+    inplace_integral(x);
+    for (int i = m; i < min<int>(this->size(), 2 * m); ++i) x[i] += (*this)[i];
+    fill(begin(x), begin(x) + m, mint(0));
+    x.ntt();
+    for (int i = 0; i < 2 * m; ++i) x[i] *= y[i];
+    x.intt();
+    b.insert(end(b), begin(x) + m, end(x));
+  }
+  return fps{begin(b), begin(b) + deg};
+}
+
+/**
+ * @brief NTT mod用FPSライブラリ
+ * @docs docs/fps/ntt-friendly-fps.md
+ */
+#line 2 "misc/fastio.hpp"
+
+#line 6 "misc/fastio.hpp"
+
+using namespace std;
+
+namespace fastio {
+static constexpr int SZ = 1 << 17;
+char inbuf[SZ], outbuf[SZ];
+int in_left = 0, in_right = 0, out_right = 0;
+
+struct Pre {
+  char num[40000];
+  constexpr Pre() : num() {
+    for (int i = 0; i < 10000; i++) {
+      int n = i;
+      for (int j = 3; j >= 0; j--) {
+        num[i * 4 + j] = n % 10 + '0';
+        n /= 10;
+      }
+    }
+  }
+} constexpr pre;
+
+inline void load() {
+  int len = in_right - in_left;
+  memmove(inbuf, inbuf + in_left, len);
+  in_right = len + fread(inbuf + len, 1, SZ - len, stdin);
+  in_left = 0;
+}
+
+inline void flush() {
+  fwrite(outbuf, 1, out_right, stdout);
+  out_right = 0;
+}
+
+inline void skip_space() {
+  if (in_left + 32 > in_right) load();
+  while (inbuf[in_left] <= ' ') in_left++;
+}
+
+inline void rd(char& c) {
+  if (in_left + 32 > in_right) load();
+  c = inbuf[in_left++];
+}
+template <typename T>
+inline void rd(T& x) {
+  if (in_left + 32 > in_right) load();
+  char c;
+  do c = inbuf[in_left++];
+  while (c < '-');
+  [[maybe_unused]] bool minus = false;
+  if constexpr (is_signed<T>::value == true) {
+    if (c == '-') minus = true, c = inbuf[in_left++];
+  }
+  x = 0;
+  while (c >= '0') {
+    x = x * 10 + (c & 15);
+    c = inbuf[in_left++];
+  }
+  if constexpr (is_signed<T>::value == true) {
+    if (minus) x = -x;
+  }
+}
+inline void rd() {}
+template <typename Head, typename... Tail>
+inline void rd(Head& head, Tail&... tail) {
+  rd(head);
+  rd(tail...);
+}
+
+inline void wt(char c) {
+  if (out_right > SZ - 32) flush();
+  outbuf[out_right++] = c;
+}
+inline void wt(bool b) {
+  if (out_right > SZ - 32) flush();
+  outbuf[out_right++] = b ? '1' : '0';
+}
+inline void wt(const string &s) {
+  if (out_right + s.size() > SZ - 32) flush();
+  memcpy(outbuf + out_right, s.data(), sizeof(char) * s.size());
+  out_right += s.size();
+}
+template <typename T>
+inline void wt(T x) {
+  if (out_right > SZ - 32) flush();
+  if (!x) {
+    outbuf[out_right++] = '0';
+    return;
+  }
+  if constexpr (is_signed<T>::value == true) {
+    if (x < 0) outbuf[out_right++] = '-', x = -x;
+  }
+  int i = 12;
+  char buf[16];
+  while (x >= 10000) {
+    memcpy(buf + i, pre.num + (x % 10000) * 4, 4);
+    x /= 10000;
+    i -= 4;
+  }
+  if (x < 100) {
+    if (x < 10) {
+      outbuf[out_right] = '0' + x;
+      ++out_right;
+    } else {
+      uint32_t q = (uint32_t(x) * 205) >> 11;
+      uint32_t r = uint32_t(x) - q * 10;
+      outbuf[out_right] = '0' + q;
+      outbuf[out_right + 1] = '0' + r;
+      out_right += 2;
+    }
+  } else {
+    if (x < 1000) {
+      memcpy(outbuf + out_right, pre.num + (x << 2) + 1, 3);
+      out_right += 3;
+    } else {
+      memcpy(outbuf + out_right, pre.num + (x << 2), 4);
+      out_right += 4;
+    }
+  }
+  memcpy(outbuf + out_right, buf + i + 4, 12 - i);
+  out_right += 12 - i;
+}
+inline void wt() {}
+template <typename Head, typename... Tail>
+inline void wt(Head&& head, Tail&&... tail) {
+  wt(head);
+  wt(forward<Tail>(tail)...);
+}
+template <typename... Args>
+inline void wtn(Args&&... x) {
+  wt(forward<Args>(x)...);
+  wt('\n');
+}
+
+struct Dummy {
+  Dummy() { atexit(flush); }
+} dummy;
+
+}  // namespace fastio
+using fastio::rd;
+using fastio::skip_space;
+using fastio::wt;
+using fastio::wtn;
+#line 2 "modint/montgomery-modint.hpp"
+
+
+
+template <uint32_t mod>
+struct LazyMontgomeryModInt {
+  using mint = LazyMontgomeryModInt;
+  using i32 = int32_t;
+  using u32 = uint32_t;
+  using u64 = uint64_t;
+
+  static constexpr u32 get_r() {
+    u32 ret = mod;
+    for (i32 i = 0; i < 4; ++i) ret *= 2 - mod * ret;
+    return ret;
+  }
+
+  static constexpr u32 r = get_r();
+  static constexpr u32 n2 = -u64(mod) % mod;
+  static_assert(r * mod == 1, "invalid, r * mod != 1");
+  static_assert(mod < (1 << 30), "invalid, mod >= 2 ^ 30");
+  static_assert((mod & 1) == 1, "invalid, mod % 2 == 0");
+
+  u32 a;
+
+  constexpr LazyMontgomeryModInt() : a(0) {}
+  constexpr LazyMontgomeryModInt(const int64_t &b)
+      : a(reduce(u64(b % mod + mod) * n2)){};
+
+  static constexpr u32 reduce(const u64 &b) {
+    return (b + u64(u32(b) * u32(-r)) * mod) >> 32;
+  }
+
+  constexpr mint &operator+=(const mint &b) {
+    if (i32(a += b.a - 2 * mod) < 0) a += 2 * mod;
+    return *this;
+  }
+
+  constexpr mint &operator-=(const mint &b) {
+    if (i32(a -= b.a) < 0) a += 2 * mod;
+    return *this;
+  }
+
+  constexpr mint &operator*=(const mint &b) {
+    a = reduce(u64(a) * b.a);
+    return *this;
+  }
+
+  constexpr mint &operator/=(const mint &b) {
+    *this *= b.inverse();
+    return *this;
+  }
+
+  constexpr mint operator+(const mint &b) const { return mint(*this) += b; }
+  constexpr mint operator-(const mint &b) const { return mint(*this) -= b; }
+  constexpr mint operator*(const mint &b) const { return mint(*this) *= b; }
+  constexpr mint operator/(const mint &b) const { return mint(*this) /= b; }
+  constexpr bool operator==(const mint &b) const {
+    return (a >= mod ? a - mod : a) == (b.a >= mod ? b.a - mod : b.a);
+  }
+  constexpr bool operator!=(const mint &b) const {
+    return (a >= mod ? a - mod : a) != (b.a >= mod ? b.a - mod : b.a);
+  }
+  constexpr mint operator-() const { return mint() - mint(*this); }
+
+  constexpr mint pow(u64 n) const {
+    mint ret(1), mul(*this);
+    while (n > 0) {
+      if (n & 1) ret *= mul;
+      mul *= mul;
+      n >>= 1;
+    }
+    return ret;
+  }
+  
+  constexpr mint inverse() const { return pow(mod - 2); }
+
+  friend ostream &operator<<(ostream &os, const mint &b) {
+    return os << b.get();
+  }
+
+  friend istream &operator>>(istream &is, mint &b) {
+    int64_t t;
+    is >> t;
+    b = LazyMontgomeryModInt<mod>(t);
+    return (is);
+  }
+  
+  constexpr u32 get() const {
+    u32 ret = reduce(a);
+    return ret >= mod ? ret - mod : ret;
+  }
+
+  static constexpr u32 get_mod() { return mod; }
+};
+#line 11 "verify/verify-yosupo-fps/yosupo-composition.test.cpp"
+
+using namespace Nyaan; void Nyaan::solve() {
+  using mint = LazyMontgomeryModInt<998244353>;
+  using fps = FormalPowerSeries<mint>;
+  auto C = Binomial<mint>(8192);
+  int N;
+  rd(N);
+  fps f(N), g(N);
+  for (int i = 0; i < N; i++) {
     int n;
-    cin>>n;
-    fps<mint>f(n),g(n);
-    for(int i=0;i<n;++i)cin>>f[i];
-    for(int i=0;i<n;++i)cin>>g[i];
-    auto p=f.manipulate(g,n);
-    auto q=f.manipulate(g,n);
-    p.resize(n,0);
-    for(int i=0;i<n;++i)cout<<p[i]<<" \n"[i==n-1];
+    rd(n);
+    f[i] = n;
+  }
+  for (int i = 0; i < N; i++) {
+    int n;
+    rd(n);
+    g[i] = n;
+  }
+  fps R = Composition<mint>(g, f, C);
+  for (int i = 0; i < (int)R.size(); i++) {
+    if (i) wt(' ');
+    wt(R[i].get());
+  }
+  wt('\n');
 }
