@@ -13,13 +13,10 @@ import shutil
 import hashlib
 import json
 from datetime import datetime
-from logging import getLogger
-from os import getenv
-from pathlib import Path
 from subprocess import (PIPE, STDOUT, CalledProcessError,
                         TimeoutExpired, check_call, run)
 from tempfile import TemporaryDirectory
-from typing import Any, Iterator, List, MutableMapping, Optional
+from typing import Any, Iterator, MutableMapping, Optional
 
 from enum import Enum
 import toml
