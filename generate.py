@@ -16,7 +16,7 @@ from datetime import datetime
 from subprocess import (PIPE, STDOUT, CalledProcessError,
                         TimeoutExpired, check_call, run)
 from tempfile import TemporaryDirectory
-from typing import Any, Iterator, MutableMapping, Optional
+from typing import Any, Iterator, MutableMapping, Optional, Union
 
 from enum import Enum
 import toml
@@ -27,7 +27,7 @@ CASENAME_LEN_LIMIT = 40
 STACK_SIZE = 2 ** 28  # 256 MB
 
 
-def casename(name: str | Path, i: int) -> str:
+def casename(name: Union[str, Path], i: int) -> str:
     """(random, 1) -> random_01"""
     return Path(name).stem + '_' + str(i).zfill(2)
 
@@ -55,7 +55,7 @@ def find_problem_dir(rootdir: Path, problem_name: Path) -> Optional[Path]:
     return tomls[0].parent
 
 
-def compile(src: Path, rootdir: Path, opts: list[str] = []):
+def compile(src: Path, rootdir: Path, opts: List[str] = []):
     if src.suffix == '.cpp':
         # use clang for msys2 clang environment
         if os.name == 'nt' and sysconfig.get_platform().startswith('mingw') and sysconfig.get_platform().endswith('clang'):

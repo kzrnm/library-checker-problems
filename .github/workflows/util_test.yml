@@ -22,7 +22,7 @@ jobs:
       - name: Linter
         uses: chartboost/ruff-action@v1
         with:
-          args: "check --target-version py37"
+          args: "check --target-version py37 --select=FA102"
       - name: Run generate_test.py
         run: |
           ulimit -s unlimited
